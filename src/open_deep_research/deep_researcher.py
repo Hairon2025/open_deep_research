@@ -1,4 +1,5 @@
 """Main LangGraph implementation for the Deep Research agent."""
+"""Deep Research 智能体的主 LangGraph 实现。"""
 
 import asyncio
 from typing import Literal
@@ -53,6 +54,7 @@ from open_deep_research.utils import (
 )
 
 # Initialize a configurable model that we will use throughout the agent
+# 初始化一个可配置模型，在整个智能体中复用
 configurable_model = init_chat_model(
     configurable_fields=("model", "max_tokens", "api_key"),
 )
@@ -63,14 +65,19 @@ async def clarify_with_user(state: AgentState, config: RunnableConfig) -> Comman
     This function determines whether the user's request needs clarification before proceeding
     with research. If clarification is disabled or not needed, it proceeds directly to research.
     
+    分析用户消息，如果研究范围不清晰则提出澄清问题。该函数决定用户请求在进入研究前是否需要澄清。若澄清功能被禁用或无需澄清，则直接进入研究流程。
+
     Args:
-        state: Current agent state containing user messages
-        config: Runtime configuration with model settings and preferences
+        state: Current agent state containing user messages(当前智能体状态，包含用户消息)
+        config: Runtime configuration with model settings and preferences(运行时配置，包含模型设置和偏好)
         
     Returns:
         Command to either end with a clarifying question or proceed to research brief
+        返回的命令指示智能体是结束于澄清问题还是继续研究简报。
     """
+    
     # Step 1: Check if clarification is enabled in configuration
+    # 第 1 步：检查配置中是否启用了澄清功能
     configurable = Configuration.from_runnable_config(config)
     if not configurable.allow_clarification:
         # Skip clarification step and proceed directly to research
