@@ -34,30 +34,31 @@ class Summary(BaseModel):
     key_excerpts: str  # 关键摘录
 
 class ClarifyWithUser(BaseModel):
-    """Model for user clarification requests."""
-    """用于向用户请求澄清的模型。"""
-    
+    """
+    Model for user clarification requests.
+    用于向用户请求澄清的模型。
+    """
+    # 说明：是否需要向用户提出澄清问题。
     need_clarification: bool = Field(
         description="Whether the user needs to be asked a clarifying question.",
     )
-    # 说明：是否需要向用户提出澄清问题。
+    # 说明：用于询问用户以澄清报告范围的问题。
     question: str = Field(
         description="A question to ask the user to clarify the report scope",
     )
-    # 说明：用于询问用户以澄清报告范围的问题。
+    # 说明：确认消息，表示在用户提供必要信息后我们将开始研究。
     verification: str = Field(
         description="Verify message that we will start research after the user has provided the necessary information.",
     )
-    # 说明：确认消息，表示在用户提供必要信息后我们将开始研究。
 
 class ResearchQuestion(BaseModel):
     """Research question and brief for guiding research."""
     """用于指导研究的研究问题与研究简报。"""
     
+    # 说明：将用于指导研究的研究问题。
     research_brief: str = Field(
         description="A research question that will be used to guide the research.",
     )
-    # 说明：将用于指导研究的研究问题。
 
 
 ###################
@@ -81,8 +82,8 @@ class AgentInputState(MessagesState):
     """InputState 仅包含 'messages'（输入状态仅包含消息）。"""
 
 class AgentState(MessagesState):
-    """Main agent state containing messages and research data."""
-    """主智能体状态，包含消息与研究数据。"""
+    """Main agent state containing messages and research data.
+    主智能体状态，包含消息与研究数据。"""
     
     supervisor_messages: Annotated[list[MessageLikeRepresentation], override_reducer]  # 主管消息列表（支持覆盖合并）
     research_brief: Optional[str]  # 研究简报（可选）
@@ -91,8 +92,8 @@ class AgentState(MessagesState):
     final_report: str  # 最终报告
 
 class SupervisorState(TypedDict):
-    """State for the supervisor that manages research tasks."""
-    """主管状态，用于管理研究任务。"""
+    """State for the supervisor that manages research tasks.
+    主管状态，用于管理研究任务。"""
     
     supervisor_messages: Annotated[list[MessageLikeRepresentation], override_reducer]  # 主管消息列表（支持覆盖合并）
     research_brief: str  # 研究简报

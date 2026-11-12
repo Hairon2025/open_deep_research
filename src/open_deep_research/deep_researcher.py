@@ -263,10 +263,6 @@ async def supervisor_tools(state: SupervisorState, config: RunnableConfig) -> Co
     This function handles three types of supervisor tool calls:
     该函数处理三类主管工具调用：
 
-
-    参数：
-
-    返回：
     1. think_tool - Strategic reflection that continues the conversation（策略性反思，继续对话）
     2. ConductResearch - Delegates research tasks to sub-researchers（将研究任务委派给子研究人员）
     3. ResearchComplete - Signals completion of research phase（表示研究阶段完成）
@@ -404,8 +400,8 @@ async def supervisor_tools(state: SupervisorState, config: RunnableConfig) -> Co
     ) 
 
 # Supervisor Subgraph Construction
-# 主管子图构建
 # Creates the supervisor workflow that manages research delegation and coordination
+# 主管子图构建
 # 创建管理研究委派与协调的主管工作流
 supervisor_builder = StateGraph(SupervisorState, config_schema=Configuration)
 
@@ -424,29 +420,22 @@ supervisor_subgraph = supervisor_builder.compile()
 
 async def researcher(state: ResearcherState, config: RunnableConfig) -> Command[Literal["researcher_tools"]]:
     """Individual researcher that conducts focused research on specific topics.
-    
+    负责在特定主题上开展聚焦研究的单个研究人员。
+
     This researcher is given a specific research topic by the supervisor and uses
     available tools (search, think_tool, MCP tools) to gather comprehensive information.
     It can use think_tool for strategic planning between searches.
-    
-    Args:
-        state: Current researcher state with messages and topic context
-        config: Runtime configuration with model settings and tool availability
-        
-    Returns:
-        Command to proceed to researcher_tools for tool execution
-    """
-    """负责在特定主题上开展聚焦研究的单个研究人员。
-
     主管会给该研究人员指定一个具体研究主题，它使用可用工具（搜索、think_tool、MCP 工具）
     收集全面信息。它可以在搜索之间使用 think_tool 做策略性规划。
 
-    参数：
-        state：当前研究人员状态，包含消息与主题上下文
-        config：运行时配置，包含模型设置与工具可用性
 
-    返回：
-        Command：继续进入 researcher_tools 执行工具调用
+    Args:
+        state: Current researcher state with messages and topic context；当前研究人员状态，包含消息与主题上下文
+        config: Runtime configuration with model settings and tool availability；运行时配置，包含模型设置与工具可用性
+        
+    Returns:
+        Command to proceed to researcher_tools for tool execution；
+        继续进入 researcher_tools 执行工具调用
     """
     # Step 1: Load configuration and validate tool availability
     # 第 1 步：加载配置并校验工具可用性
@@ -515,34 +504,26 @@ async def execute_tool_safely(tool, args, config):
 
 async def researcher_tools(state: ResearcherState, config: RunnableConfig) -> Command[Literal["researcher", "compress_research"]]:
     """Execute tools called by the researcher, including search tools and strategic thinking.
-    
+    执行研究人员调用的工具，包括搜索工具与策略性思考。
+
     This function handles various types of researcher tool calls:
     1. think_tool - Strategic reflection that continues the research conversation
     2. Search tools (tavily_search, web_search) - Information gathering
     3. MCP tools - External tool integrations
     4. ResearchComplete - Signals completion of individual research task
     
-    Args:
-        state: Current researcher state with messages and iteration count
-        config: Runtime configuration with research limits and tool settings
-        
-    Returns:
-        Command to either continue research loop or proceed to compression
-    """
-    """执行研究人员调用的工具，包括搜索工具与策略性思考。
-
     该函数处理多类研究人员工具调用：
     1. think_tool —— 策略性反思，继续研究对话
     2. 搜索工具（tavily_search、web_search）—— 信息收集
     3. MCP 工具 —— 外部工具集成
     4. ResearchComplete —— 表示单个研究任务完成
 
-    参数：
-        state：当前研究人员状态，包含消息与迭代计数
-        config：运行时配置，包含研究上限与工具设置
-
-    返回：
-        Command：要么继续研究循环，要么进入压缩阶段
+    Args:
+        state: Current researcher state with messages and iteration count
+        config: Runtime configuration with research limits and tool settings
+        
+    Returns:
+        Command to either continue research loop or proceed to compression
     """
     # Step 1: Extract current state and check early exit conditions
     # 第 1 步：提取当前状态并检查提前退出条件
@@ -738,27 +719,18 @@ researcher_subgraph = researcher_builder.compile()
 
 async def final_report_generation(state: AgentState, config: RunnableConfig):
     """Generate the final comprehensive research report with retry logic for token limits.
-    
+    生成最终的综合性研究报告，并针对 token 限制做重试。
+
     This function takes all collected research findings and synthesizes them into a 
     well-structured, comprehensive final report using the configured report generation model.
-    
-    Args:
-        state: Agent state containing research findings and context
-        config: Runtime configuration with model settings and API keys
-        
-    Returns:
-        Dictionary containing the final report and cleared state
-    """
-    """生成最终的综合性研究报告，并针对 token 限制做重试。
-
     该函数接收所有收集到的研究成果，使用配置的报告生成模型将其综合为一份
     结构良好的综合性最终报告。
 
-    参数：
-        state：包含研究成果与上下文的智能体状态
-        config：运行时配置，包含模型设置与 API 密钥
-
-    返回：
+    Args:
+        state: Agent state containing research findings and context；包含研究成果与上下文的智能体状态
+        config: Runtime configuration with model settings and API keys；运行时配置，包含模型设置与 API 密钥
+    Returns:
+        Dictionary containing the final report and cleared state
         包含最终报告与已清空状态的字典
     """
     # Step 1: Extract research findings and prepare state cleanup
