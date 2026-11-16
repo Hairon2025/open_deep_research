@@ -15,6 +15,7 @@ class SearchAPI(Enum):
     
     ANTHROPIC = "anthropic"  # Anthropic 原生网页搜索
     OPENAI = "openai"  # OpenAI 原生网页搜索
+    ALIYUN_OPENSEARCH = "aliyun_opensearch" # 阿里云 OpenSearch
     TAVILY = "tavily"  # Tavily 搜索
     NONE = "none"  # 不使用搜索
 
@@ -64,11 +65,11 @@ class Configuration(BaseModel):
     
     # 是否允许研究人员在开始研究前向用户提出澄清问题，默认 True（允许）
     allow_clarification: bool = Field(
-        default=True,
+        default=False,
         metadata={
             "x_oap_ui_config": {
                 "type": "boolean",
-                "default": True,
+                "default": False,
                 "description": "Whether to allow the researcher to ask the user clarifying questions before starting research"
                 # 说明：是否允许研究人员在开始研究前向用户提出澄清问题
             }
@@ -77,11 +78,11 @@ class Configuration(BaseModel):
 
     # 同时运行的研究单元（子智能体）最大数量，默认 5，最少为 1，最大为 20。
     max_concurrent_research_units: int = Field(
-        default=5,
+        default=1,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
-                "default": 5,
+                "default": 1,
                 "min": 1,
                 "max": 20,
                 "step": 1,
@@ -95,14 +96,15 @@ class Configuration(BaseModel):
     
     # Search API Configuration（搜索 API 提供方配置）
     search_api: SearchAPI = Field(
-        default=SearchAPI.TAVILY,
+        default=SearchAPI.ALIYUN_OPENSEARCH,
         metadata={
             "x_oap_ui_config": {
                 "type": "select",
-                "default": "tavily",
+                "default": "aliyun_opensearch",
                 "description": "Search API to use for research. NOTE: Make sure your Researcher Model supports the selected search API.",
                 # 说明：用于研究的搜索 API。注意：请确保你的 Researcher 模型支持所选的搜索 API。
                 "options": [
+                    {"label": "Aliyun OpenSearch", "value": SearchAPI.ALIYUN_OPENSEARCH.value},
                     {"label": "Tavily", "value": SearchAPI.TAVILY.value},
                     {"label": "OpenAI Native Web Search", "value": SearchAPI.OPENAI.value},
                     {"label": "Anthropic Native Web Search", "value": SearchAPI.ANTHROPIC.value},
@@ -114,11 +116,11 @@ class Configuration(BaseModel):
     
     # Research Supervisor 的最大研究迭代次数，范围 1 - 10, 默认 6
     max_researcher_iterations: int = Field(
-        default=6,
+        default=2,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
-                "default": 6,
+                "default": 2,
                 "min": 1,
                 "max": 10,
                 "step": 1,

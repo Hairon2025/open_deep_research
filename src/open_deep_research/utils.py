@@ -24,10 +24,7 @@ from langchain_core.tools import (
     ToolException,
     tool,
 )
-from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.config import get_store
-from mcp import McpError
-from tavily import AsyncTavilyClient
 
 from open_deep_research.configuration import Configuration, SearchAPI
 from open_deep_research.prompts import summarize_webpage_prompt
@@ -87,6 +84,7 @@ async def tavily_search(
         model=configurable.summarization_model,
         max_tokens=configurable.summarization_model_max_tokens,
         api_key=model_api_key,
+        reasoning_effort="none",
         tags=["langsmith:nostream"]
     ).with_structured_output(Summary).with_retry(
         stop_after_attempt=configurable.max_structured_output_retries
@@ -170,7 +168,199 @@ async def tavily_search_async(
     
     # Execute all search queries in parallel and return results
     search_results = await asyncio.gather(*search_tasks)
+
+    try:
+        from tavily import AsyncTavilyClient
+    except ImportError as exc:
+        raise ToolException(
+            "当前环境没有安装 Tavily，请选择其他搜索服务。"
+        ) from exc
     return search_results
+
+def get_aliyun_opensearch_config() -> tuple[str, str, str]:
+    """读取并检查阿里云 OpenSearch 配置。"""
+    api_key = os.getenv("ALIYUN_OPENSEARCH_API_KEY")
+    host = os.getenv("ALIYUN_OPENSEARCH_HOST")
+    workspace = os.getenv("ALIYUN_OPENSEARCH_WORKSPACE", "default")
+
+    missing = []
+
+    if not api_key:
+        missing.append("ALIYUN_OPENSEARCH_API_KEY")
+
+    if not host:
+        missing.append("ALIYUN_OPENSEARCH_HOST")
+
+    if missing:
+        raise ToolException(
+            "缺少 OpenSearch 配置：" + ", ".join(missing)
+        )
+
+    if not host.startswith(("http://", "https://")):
+        host = f"https://{host}"
+
+    return api_key, host.rstrip("/"), workspace
+
+
+async def aliyun_opensearch_search_async(
+    search_queries: List[str],
+    max_results: int = 5,
+    include_raw_content: bool = True,
+) -> List[Dict[str, Any]]:
+    """调用阿里云 OpenSearch 联网搜索接口。"""
+    api_key, host, workspace = get_aliyun_opensearch_config()
+
+    url = (
+        f"{host}/v3/openapi/workspaces/"
+        f"{workspace}/web-search/ops-web-search-001"
+    )
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    timeout = aiohttp.ClientTimeout(total=60)
+
+    async def search_one(
+        session: aiohttp.ClientSession,
+        query: str,
+    ) -> Dict[str, Any]:
+        payload = {
+            "query": query,
+            "query_rewrite": True,
+            "top_k": max_results,
+            "content_type": (
+                "mainText" if include_raw_content else "snippet"
+            ),
+            "way": "lite",
+        }
+
+        async with session.post(
+            url,
+            headers=headers,
+            json=payload,
+        ) as response:
+            data = await response.json(content_type=None)
+
+            if response.status >= 400 or data.get("code"):
+                code = data.get("code", f"HTTP {response.status}")
+                message = data.get("message", "未知错误")
+
+                raise ToolException(
+                    f"OpenSearch 请求失败：{code}: {message}"
+                )
+
+        results = []
+
+        for item in data.get("result", {}).get("search_result", []):
+            link = item.get("link", "")
+
+            if not link:
+                continue
+
+            snippet = item.get("snippet", "")
+
+            results.append(
+                {
+                    "title": item.get("title", ""),
+                    "url": link,
+                    "content": snippet,
+                    "raw_content": (
+                        item.get("content", "") or snippet
+                    ),
+                }
+            )
+
+        return {
+            "query": query,
+            "results": results,
+        }
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        tasks = [
+            search_one(session, query)
+            for query in search_queries
+        ]
+
+        return await asyncio.gather(*tasks)
+
+ALIYUN_OPENSEARCH_DESCRIPTION = (
+    "Search the public web using Aliyun OpenSearch. "
+    "Returns webpage titles, URLs, snippets, and parsed content. "
+    "Useful for researching current events and factual information."
+)
+
+
+@tool("web_search", description=ALIYUN_OPENSEARCH_DESCRIPTION)
+async def aliyun_opensearch_search(
+    queries: List[str],
+    max_results: Annotated[int, InjectedToolArg] = 5,
+    config: RunnableConfig = None,
+) -> str:
+    """使用阿里云 OpenSearch 搜索并格式化结果。"""
+    search_responses = await aliyun_opensearch_search_async(
+        search_queries=queries,
+        max_results=max_results,
+        include_raw_content=True,
+    )
+
+    # 按 URL 去重
+    unique_results = {}
+
+    for response in search_responses:
+        for result in response.get("results", []):
+            url = result.get("url")
+
+            if url and url not in unique_results:
+                unique_results[url] = result
+
+    if not unique_results:
+        return (
+            "No valid search results were found. "
+            "Please try different search queries."
+        )
+
+    # 限制工具返回的总内容长度，避免一次搜索消耗过多 Token
+    configurable = Configuration.from_runnable_config(config)
+    remaining_chars = configurable.max_content_length
+
+    output_parts = ["Search results:"]
+
+    for index, (url, result) in enumerate(
+        unique_results.items(),
+        start=1,
+    ):
+        if remaining_chars <= 0:
+            break
+
+        content = (
+            result.get("raw_content")
+            or result.get("content")
+            or "No content available."
+        )
+
+        # 单个来源最多保留 10000 个字符
+        source_limit = min(10_000, remaining_chars)
+        content = content[:source_limit]
+        remaining_chars -= len(content)
+
+        title = result.get("title") or "Untitled source"
+
+        output_parts.extend(
+            [
+                "",
+                f"--- SOURCE {index}: {title} ---",
+                f"URL: {url}",
+                "",
+                "CONTENT:",
+                content,
+                "",
+                "-" * 80,
+            ]
+        )
+
+    return "\n".join(output_parts)
 
 async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
     """Summarize webpage content using AI model with timeout protection.
@@ -391,6 +581,8 @@ def wrap_mcp_authenticate_tool(tool: StructuredTool) -> StructuredTool:
     Returns:
         Enhanced tool with authentication error handling
     """
+    from mcp import McpError
+
     original_coroutine = tool.coroutine
     
     async def authentication_wrapper(**kwargs):
@@ -548,6 +740,15 @@ async def get_search_tool(search_api: SearchAPI):
     elif search_api == SearchAPI.OPENAI:
         # OpenAI's web search preview functionality
         return [{"type": "web_search_preview"}]
+
+    elif search_api == SearchAPI.ALIYUN_OPENSEARCH:
+        aliyun_opensearch_search.metadata = {
+            **(aliyun_opensearch_search.metadata or {}),
+            "type": "search",
+            "name": "web_search",
+        }
+
+        return [aliyun_opensearch_search]
         
     elif search_api == SearchAPI.TAVILY:
         # Configure Tavily search tool with metadata

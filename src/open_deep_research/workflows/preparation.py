@@ -36,7 +36,7 @@ from open_deep_research.utils import (
 # Initialize a configurable model that we will use throughout the agent
 # 初始化一个可配置模型，在整个智能体中复用
 configurable_model = init_chat_model(
-    configurable_fields=("model", "max_tokens", "api_key"),
+    configurable_fields=("model", "max_tokens", "api_key", "reasoning_effort"),
 )
 
 
@@ -71,6 +71,7 @@ async def clarify_with_user(state: AgentState, config: RunnableConfig) -> Comman
         "model": configurable.research_model,
         "max_tokens": configurable.research_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.research_model, config),
+        "reasoning_effort": "none",
         "tags": ["langsmith:nostream"]
     }
     
@@ -136,6 +137,7 @@ async def write_research_brief(state: AgentState, config: RunnableConfig) -> Com
         "model": configurable.research_model,
         "max_tokens": configurable.research_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.research_model, config),
+        "reasoning_effort": "none",
         "tags": ["langsmith:nostream"]
     }
     

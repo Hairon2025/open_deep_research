@@ -103,3 +103,24 @@ flowchart TD
 ```
 
 
+
+修改记录：
+
+在 langgraph.json 里移除了 auth 配置, 以下是修改前的配置
+
+```json
+{
+    "dockerfile_lines": [],
+    "graphs": {
+      "Deep Researcher": "./src/open_deep_research/deep_researcher.py:deep_researcher"
+    },
+    "python_version": "3.11",
+    "env": "./.env",
+    "dependencies": [
+      "."
+    ],
+    "auth": {
+      "path": "./src/security/auth.py:auth"
+    }
+}
+```
