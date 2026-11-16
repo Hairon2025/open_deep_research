@@ -147,11 +147,11 @@ class Configuration(BaseModel):
     
     # 汇总模型配置（Summarization Model Configuration）
     summarization_model: str = Field(
-        default="openai:gpt-4.1-mini",
+        default="deepseek:deepseek-flash",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1-mini",
+                "default": "deepseek:deepseek-flash",
                 "description": "Model for summarizing research results from Tavily search results"
                 # 说明：用于汇总 Tavily 搜索结果所得研究结果的模型
             }
@@ -188,11 +188,11 @@ class Configuration(BaseModel):
 
     # 研究模型配置（Research Model Configuration）
     research_model: str = Field(
-        default="openai:gpt-4.1",
+        default="deepseek:deepseek-flash",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1",
+                "default": "deepseek:deepseek-flash",
                 "description": "Model for conducting research. NOTE: Make sure your Researcher Model supports the selected search API."
                 # 说明：用于开展研究的模型。注意：请确保你的 Researcher 模型支持所选的搜索 API。
             }
@@ -214,11 +214,11 @@ class Configuration(BaseModel):
 
     # 压缩模型配置（Compression Model Configuration）
     compression_model: str = Field(
-        default="openai:gpt-4.1",
+        default="deepseek:deepseek-flash",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1",
+                "default": "deepseek:deepseek-flash",
                 "description": "Model for compressing research findings from sub-agents. NOTE: Make sure your Compression Model supports the selected search API."
                 # 说明：用于压缩子智能体研究成果的模型。注意：请确保你的 Compression 模型支持所选的搜索 API。
             }
@@ -240,11 +240,11 @@ class Configuration(BaseModel):
 
     # 最终报告模型配置（Final Report Model Configuration）
     final_report_model: str = Field(
-        default="openai:gpt-4.1",
+        default="deepseek:deepseek-flash",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1",
+                "default": "deepseek:deepseek-flash",
                 "description": "Model for writing the final report from all research findings"
                 # 说明：用于基于全部研究成果撰写最终报告的模型
             }
